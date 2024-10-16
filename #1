@@ -1,0 +1,84 @@
+from Crypto.Hash import SHA256
+from Crypto.Protocol.KDF import HKDF
+from Crypto.Cipher import Salsa20
+from Crypto.Random import get_random_bytes
+
+# Parámetros del grupo
+p = 227
+g = 12
+
+# Generación de llaves privadas para el cliente y el servidor
+private_key_client = get_random_bytes(1)[0] % p
+private_key_server = get_random_bytes(1)[0] % p
+
+# Cálculo de llaves públicas
+public_key_client = pow(g, private_key_client, p)
+public_key_server = pow(g, private_key_server, p)
+
+# Intercambio de llaves y cálculo del secreto compartido
+shared_secret_client = pow(public_key_server, private_key_client, p)
+shared_secret_server = pow(public_key_client, private_key_server, p)
+
+# Verificamos que ambos secretos sean iguales
+assert shared_secret_client == shared_secret_server
+
+# Convertimos el secreto compartido en bytes
+shared_secret_bytes = shared_secret_client.to_bytes((shared_secret_client.bit_length() + 7) // 8, byteorder='big')
+
+# Generamos la llave simétrica usando HKDF con SHA256
+key = HKDF(shared_secret_bytes, 32, b'', SHA256)
+
+# Ejemplo de cifrado con Salsa20
+cipher = Salsa20.new(key=key)
+nonce = cipher.nonce
+message = b'Este es un mensaje secreto'
+ciphertext = cipher.encrypt(message)
+
+print("Mensaje cifrado:", ciphertext)
+print("Nonce utilizado:", nonce)
+
+
+
+
+def baby_step_giant_step(g, h, p):
+    from math import isqrt
+    from collections import defaultdict
+
+    # Calcula el tamaño del grupo
+    m = isqrt(p) + 1
+
+    # Paso 1: Precomputar los valores g^j (j=0,1,...,m)
+    baby_steps = {}
+    current = 1
+    for j in range(m):
+        baby_steps[current] = j
+        current = (current * g) % p
+
+    # Paso 2: Calcular g^(-m) mod p
+    g_m = pow(g, p - m - 1, p)  # g^(-m) mod p
+
+    # Paso 3: Buscar coincidencias en los pasos
+    current = h
+    for i in range(m):
+        if current in baby_steps:
+            # Se encontró la solución
+            return i * m + baby_steps[current]
+        current = (current * g_m) % p
+
+    return None  # No se encontró solución
+
+# Parámetros del grupo 
+p = 227
+g = 12
+
+public_key_client = 518
+
+# Ejecutar el ataque
+log_discrete_solution = baby_step_giant_step(g, public_key_client, p)
+
+if log_discrete_solution is not None:
+    print(f"Logaritmo discreto encontrado: {log_discrete_solution}")
+else:
+    print("No se encontró solución para el logaritmo discreto.")
+
+

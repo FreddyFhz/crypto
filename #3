@@ -1,0 +1,83 @@
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import serialization, hashes
+
+# Generación de la llave privada y pública RSA
+private_key_rsa = rsa.generate_private_key(
+    public_exponent=65537,
+    key_size=2048,
+    backend=default_backend()
+)
+
+public_key_rsa = private_key_rsa.public_key()
+
+# Serializar la llave pública
+public_key_bytes_rsa = public_key_rsa.public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo
+)
+
+# Cifrado de un mensaje
+message = b"Este es un mensaje secreto para RSA"
+ciphertext_rsa = public_key_rsa.encrypt(
+    message,
+    padding.OAEP(
+        mgf=padding.MGF1(algorithm=hashes.SHA256()),
+        algorithm=hashes.SHA256(),
+        label=None
+    )
+)
+
+print("Mensaje cifrado con RSA:", ciphertext_rsa)
+
+# Descifrado del mensaje
+plaintext_rsa = private_key_rsa.decrypt(
+    ciphertext_rsa,
+    padding.OAEP(
+        mgf=padding.MGF1(algorithm=hashes.SHA256()),
+        algorithm=hashes.SHA256(),
+        label=None
+    )
+)
+
+print("Mensaje descifrado con RSA:", plaintext_rsa)
+
+
+from cryptography.hazmat.primitives.asymmetric import ec
+
+# Generación de las llaves de ElGamal
+private_key_elgamal = ec.generate_private_key(ec.SECP256R1(), default_backend())
+public_key_elgamal = private_key_elgamal.public_key()
+
+# Mensaje a cifrar
+message_elgamal = b"Este es un mensaje secreto para ElGamal"
+
+# Cifrado del mensaje (simulación)
+shared_key = private_key_elgamal.exchange(ec.ECDH(), public_key_rsa)  # Usando la llave pública de RSA para simular
+derived_key_elgamal = hashes.Hash(hashes.SHA256(), backend=default_backend())
+derived_key_elgamal.update(shared_key)
+symmetric_key_elgamal = derived_key_elgamal.finalize()
+
+# Ejemplo de cifrado con Salsa20
+cipher = Salsa20.new(key=symmetric_key_elgamal)
+ciphertext_elgamal = cipher.encrypt(message_elgamal)
+
+print("Mensaje cifrado con ElGamal:", ciphertext_elgamal)
+
+# Descifrado del mensaje
+cipher = Salsa20.new(key=symmetric_key_elgamal, nonce=cipher.nonce)
+plaintext_elgamal = cipher.decrypt(ciphertext_elgamal)
+
+print("Mensaje descifrado con ElGamal:", plaintext_elgamal)
+
+
+# Tamaño del mensaje cifrado en bytes
+print("Tamaño del mensaje cifrado con RSA:", len(ciphertext_rsa), "bytes")
+print("Tamaño del mensaje cifrado con ElGamal:", len(ciphertext_elgamal), "bytes")
+
+# Tamaño de las llaves públicas
+print("Tamaño de la llave pública RSA:", len(public_key_bytes_rsa), "bytes")
+print("Tamaño de la llave pública ElGamal:", len(public_key_elgamal.public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo
+)), "bytes")
